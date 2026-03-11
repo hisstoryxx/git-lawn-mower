@@ -248,6 +248,10 @@ function DayLabels() {
   );
 }
 
+// ─── Touch Input (module-level for cross-component access) ───
+
+const touchInput = { x: 0, y: 0, active: false };
+
 // ─── Lawn Mower (game mode) ───
 
 interface LawnMowerProps {
@@ -294,23 +298,30 @@ function LawnMower({ gridWidth, gridDepth, onMow }: LawnMowerProps) {
     const keys = keysRef.current;
     const clampDelta = Math.min(delta, 0.05); // prevent huge jumps
 
-    // Turning
-    const turnLeft = keys.has("arrowleft") || keys.has("a");
-    const turnRight = keys.has("arrowright") || keys.has("d");
-    if (turnLeft) rotRef.current += TURN_SPEED * clampDelta;
-    if (turnRight) rotRef.current -= TURN_SPEED * clampDelta;
+    // Turning (keyboard + touch)
+    const turnLeft = keys.has("arrowleft") || keys.has("a") || (touchInput.active && touchInput.x < -0.2);
+    const turnRight = keys.has("arrowright") || keys.has("d") || (touchInput.active && touchInput.x > 0.2);
+    if (turnLeft) {
+      const turnMult = touchInput.active ? Math.min(Math.abs(touchInput.x), 1) : 1;
+      rotRef.current += TURN_SPEED * clampDelta * turnMult;
+    }
+    if (turnRight) {
+      const turnMult = touchInput.active ? Math.min(Math.abs(touchInput.x), 1) : 1;
+      rotRef.current -= TURN_SPEED * clampDelta * turnMult;
+    }
 
-    // Acceleration (arrow keys: up/down for forward/back)
-    const forward = keys.has("arrowup") || keys.has("w");
-    const backward = keys.has("arrowdown") || keys.has("s");
+    // Acceleration (keyboard + touch)
+    const forward = keys.has("arrowup") || keys.has("w") || (touchInput.active && touchInput.y < -0.2);
+    const backward = keys.has("arrowdown") || keys.has("s") || (touchInput.active && touchInput.y > 0.2);
+    const accelMult = touchInput.active ? Math.min(Math.abs(touchInput.y), 1) : 1;
 
     if (forward) {
-      velRef.current.x += Math.sin(rotRef.current) * ACCEL * clampDelta;
-      velRef.current.z += Math.cos(rotRef.current) * ACCEL * clampDelta;
+      velRef.current.x += Math.sin(rotRef.current) * ACCEL * clampDelta * accelMult;
+      velRef.current.z += Math.cos(rotRef.current) * ACCEL * clampDelta * accelMult;
     }
     if (backward) {
-      velRef.current.x -= Math.sin(rotRef.current) * ACCEL * 0.5 * clampDelta;
-      velRef.current.z -= Math.cos(rotRef.current) * ACCEL * 0.5 * clampDelta;
+      velRef.current.x -= Math.sin(rotRef.current) * ACCEL * 0.5 * clampDelta * accelMult;
+      velRef.current.z -= Math.cos(rotRef.current) * ACCEL * 0.5 * clampDelta * accelMult;
     }
 
     // Apply friction (momentum decay)
@@ -680,9 +691,9 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
             </div>
           )}
 
-          {/* Game controls hint */}
+          {/* Game controls hint - desktop */}
           {gameMode && (
-            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm border border-green-500/30 rounded-lg p-3 text-xs text-gray-300">
+            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm border border-green-500/30 rounded-lg p-3 text-xs text-gray-300 hidden md:block">
               <div className="grid grid-cols-3 gap-1 w-24 mb-2">
                 <div />
                 <div className="bg-green-900/60 border border-green-500/40 rounded text-center py-1.5 text-green-300 font-mono text-base">^</div>
@@ -692,6 +703,58 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
                 <div className="bg-green-900/60 border border-green-500/40 rounded text-center py-1.5 text-green-300 font-mono text-base">&gt;</div>
               </div>
               Hold to accelerate!
+            </div>
+          )}
+
+          {/* Virtual joystick - mobile */}
+          {gameMode && (
+            <div
+              className="absolute bottom-6 left-6 w-32 h-32 md:hidden"
+              onTouchStart={(e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = e.currentTarget.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                touchInput.x = (touch.clientX - cx) / (rect.width / 2);
+                touchInput.y = (touch.clientY - cy) / (rect.height / 2);
+                touchInput.active = true;
+              }}
+              onTouchMove={(e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = e.currentTarget.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = (touch.clientX - cx) / (rect.width / 2);
+                const dy = (touch.clientY - cy) / (rect.height / 2);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const clamp = Math.min(dist, 1);
+                const angle = Math.atan2(dy, dx);
+                touchInput.x = Math.cos(angle) * clamp;
+                touchInput.y = Math.sin(angle) * clamp;
+                touchInput.active = true;
+              }}
+              onTouchEnd={() => {
+                touchInput.x = 0;
+                touchInput.y = 0;
+                touchInput.active = false;
+              }}
+              onTouchCancel={() => {
+                touchInput.x = 0;
+                touchInput.y = 0;
+                touchInput.active = false;
+              }}
+            >
+              {/* Outer ring */}
+              <div className="absolute inset-0 rounded-full border-2 border-green-500/40 bg-black/40 backdrop-blur-sm" />
+              {/* Inner knob */}
+              <div className="absolute top-1/2 left-1/2 w-12 h-12 -mt-6 -ml-6 rounded-full bg-green-500/50 border-2 border-green-400/60" />
+              {/* Direction arrows */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-green-400/60 text-lg">^</div>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-green-400/60 text-lg">v</div>
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 text-green-400/60 text-lg">&lt;</div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-green-400/60 text-lg">&gt;</div>
             </div>
           )}
 
