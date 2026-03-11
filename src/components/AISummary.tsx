@@ -92,8 +92,12 @@ export default function AISummary({
   );
 }
 
+function sanitize(html: string): string {
+  return html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/on\w+="[^"]*"/gi, "");
+}
+
 function markdownToHtml(md: string): string {
-  return md
+  const html = md
     .replace(/^### (.*$)/gm, '<h3 class="text-base mt-4 mb-2">$1</h3>')
     .replace(/^## (.*$)/gm, '<h2 class="text-lg mt-5 mb-2">$1</h2>')
     .replace(/^# (.*$)/gm, '<h1 class="text-xl mt-6 mb-3">$1</h1>')
@@ -101,4 +105,5 @@ function markdownToHtml(md: string): string {
     .replace(/^\- (.*$)/gm, '<li class="ml-4">$1</li>')
     .replace(/(<li[\s\S]*<\/li>)/, '<ul class="list-disc">$1</ul>')
     .replace(/\n\n/g, "<br/>");
+  return sanitize(html);
 }
