@@ -178,9 +178,57 @@ export default function Home() {
         />
       </main>
 
-      <footer className="border-t border-gray-800 px-6 py-6 mt-12">
-        <div className="max-w-7xl mx-auto text-center text-gray-600 text-sm">
-          Lawn Mower - GitLab Activity Visualizer
+      <footer className="border-t border-gray-800 px-6 py-10 mt-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col items-center gap-5">
+            <div className="text-gray-500 text-sm">
+              Lawn Mower - Git Activity Visualizer
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap justify-center">
+              {/* GitHub Sponsors */}
+              <a
+                href="https://github.com/sponsors/hisstoryxx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-pink-500/50 rounded-lg text-sm text-gray-300 hover:text-pink-400 transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4.25 2.5c-1.336 0-2.75 1.164-2.75 3 0 2.15 1.58 4.144 3.365 5.682A20.565 20.565 0 008 13.393a20.561 20.561 0 003.135-2.211C12.92 9.644 14.5 7.65 14.5 5.5c0-1.836-1.414-3-2.75-3-1.373 0-2.609.986-3.029 2.456a.75.75 0 01-1.442 0C6.859 3.486 5.623 2.5 4.25 2.5z"/>
+                </svg>
+                Sponsor
+              </a>
+
+              {/* KakaoPay */}
+              <a
+                href="https://qr.kakaopay.com/FVt9uyFzh"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-yellow-500/50 rounded-lg text-sm text-gray-300 hover:text-yellow-400 transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.82 5.32 4.56 6.73-.2.73-.73 2.64-.84 3.05-.13.49.18.48.38.35.15-.1 2.44-1.66 3.42-2.33.48.07.97.1 1.48.1 5.5 0 10-3.58 10-8s-4.5-8-10-8z"/>
+                </svg>
+                KakaoPay
+              </a>
+
+              {/* Email */}
+              <a
+                href="mailto:hisstoryxx@gmail.com"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-blue-500/50 rounded-lg text-sm text-gray-300 hover:text-blue-400 transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+                Contact
+              </a>
+            </div>
+
+            <div className="text-gray-700 text-xs">
+              Made by hisstoryxx
+            </div>
+          </div>
         </div>
       </footer>
     </div>
