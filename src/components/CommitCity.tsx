@@ -106,6 +106,7 @@ interface TextParticle {
 
 function TextDebrisParticles({ particles }: { particles: TextParticle[] }) {
   const groupRefs = useRef<(THREE.Group | null)[]>([]);
+  const { camera } = useThree();
 
   useFrame((_, delta) => {
     for (let i = 0; i < particles.length; i++) {
@@ -118,7 +119,7 @@ function TextDebrisParticles({ particles }: { particles: TextParticle[] }) {
       p.life -= delta * 0.4;
 
       group.position.copy(p.position);
-      group.rotation.z = Math.sin(p.life * 3) * 0.15;
+      group.quaternion.copy(camera.quaternion);
       group.scale.setScalar(Math.min(p.life * 1.2, 1));
     }
   });
