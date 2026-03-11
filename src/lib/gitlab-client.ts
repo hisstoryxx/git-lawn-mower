@@ -22,6 +22,7 @@ interface GitLabProject {
   name: string;
   web_url: string;
   path_with_namespace: string;
+  last_activity_at: string;
 }
 
 interface GitLabCommit {
@@ -88,7 +89,7 @@ export function clearSettings(): void {
 }
 
 const CACHE_KEY = "lawn-mower-cache";
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 export function loadCachedData(): DashboardData | null {
   if (typeof window === "undefined") return null;
@@ -167,15 +168,17 @@ async function fetchGitLabData(
   const { baseUrl, token, username } = settings;
 
   onProgress?.("Fetching projects...");
-  const projects = await fetchGitLabPages<GitLabProject>(
+  const allProjects = await fetchGitLabPages<GitLabProject>(
     baseUrl, token, "/projects",
     { membership: "true", simple: "true", archived: "false", order_by: "last_activity_at" }
   );
-  onProgress?.(`Found ${projects.length} projects. Fetching commits...`);
 
+  // Filter: only projects active within the time range
   const sinceDate = new Date();
   sinceDate.setMonth(sinceDate.getMonth() - (settings.monthsBack || 12));
   const since = sinceDate.toISOString();
+  const projects = allProjects.filter((p) => new Date(p.last_activity_at) >= sinceDate);
+  onProgress?.(`Found ${projects.length} active projects (of ${allProjects.length}). Fetching commits...`);
 
   const authorSet = new Map<string, boolean>();
   if (settings.email) authorSet.set(settings.email, true);
@@ -185,7 +188,7 @@ async function fetchGitLabData(
 
   const allCommits: { id: string; title: string; date: string; project: string }[] = [];
   const seenIds = new Set<string>();
-  const batchSize = 10;
+  const batchSize = 20;
 
   for (let i = 0; i < projects.length; i += batchSize) {
     const batch = projects.slice(i, i + batchSize);
@@ -194,26 +197,31 @@ async function fetchGitLabData(
     const results = await Promise.all(
       batch.map(async (project) => {
         const projectCommits: typeof allCommits = [];
-        for (const author of authorQueries) {
-          try {
-            const commits = await fetchGitLabPages<GitLabCommit>(
-              baseUrl, token,
-              `/projects/${project.id}/repository/commits`,
-              { since, author }
-            );
-            for (const c of commits) {
-              if (!seenIds.has(c.id)) {
-                seenIds.add(c.id);
-                projectCommits.push({
-                  id: c.id,
-                  title: c.title,
-                  date: c.committed_date,
-                  project: project.name,
-                });
-              }
+        // Parallel author queries
+        const authorResults = await Promise.all(
+          authorQueries.map(async (author) => {
+            try {
+              return await fetchGitLabPages<GitLabCommit>(
+                baseUrl, token,
+                `/projects/${project.id}/repository/commits`,
+                { since, author }
+              );
+            } catch {
+              return [];
             }
-          } catch {
-            // skip inaccessible projects
+          })
+        );
+        for (const commits of authorResults) {
+          for (const c of commits) {
+            if (!seenIds.has(c.id)) {
+              seenIds.add(c.id);
+              projectCommits.push({
+                id: c.id,
+                title: c.title,
+                date: c.committed_date,
+                project: project.name,
+              });
+            }
           }
         }
         return projectCommits;
@@ -286,7 +294,7 @@ async function fetchGitHubData(
 
   const allCommits: { id: string; title: string; date: string; project: string }[] = [];
   const seenIds = new Set<string>();
-  const batchSize = 10;
+  const batchSize = 20;
 
   for (let i = 0; i < activeRepos.length; i += batchSize) {
     const batch = activeRepos.slice(i, i + batchSize);
