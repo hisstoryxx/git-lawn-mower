@@ -208,10 +208,14 @@ function MonthLabels({ heatmap }: { heatmap: HeatmapDay[] }) {
       {months.map((m) => (
         <Text
           key={m.month + m.week}
-          position={[m.week * 1.1 + 0.5, 0, -1.2]}
-          fontSize={0.6}
-          color="#8b949e"
+          position={[m.week * 1.1 + 0.5, 0.1, -1.8]}
+          fontSize={0.8}
+          color="#e6edf3"
           anchorX="center"
+          font={undefined}
+          fontWeight="bold"
+          outlineWidth={0.03}
+          outlineColor="#000000"
         >
           {m.month}
         </Text>
@@ -229,10 +233,12 @@ function DayLabels() {
           label && (
             <Text
               key={label}
-              position={[-1.5, 0, i * 1.1 + 0.5]}
-              fontSize={0.5}
-              color="#8b949e"
+              position={[-2, 0.1, i * 1.1 + 0.5]}
+              fontSize={0.6}
+              color="#c9d1d9"
               anchorX="center"
+              outlineWidth={0.02}
+              outlineColor="#000000"
             >
               {label}
             </Text>
