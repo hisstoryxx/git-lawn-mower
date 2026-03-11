@@ -54,15 +54,13 @@ interface GitHubCommit {
 }
 
 const SETTINGS_KEY = "lawn-mower-settings";
-const KST_OFFSET = 9 * 60 * 60 * 1000; // UTC+9
 
-function toKST(dateStr: string): Date {
-  const utc = new Date(dateStr);
-  return new Date(utc.getTime() + KST_OFFSET);
+function toLocal(dateStr: string): Date {
+  return new Date(dateStr);
 }
 
-function toKSTDateString(dateStr: string): string {
-  return format(toKST(dateStr), "yyyy-MM-dd");
+function toLocalDateString(dateStr: string): string {
+  return format(toLocal(dateStr), "yyyy-MM-dd");
 }
 
 function isMergeCommit(title: string): boolean {
@@ -311,10 +309,10 @@ export async function fetchDashboardData(
 
   onProgress?.(`Processing ${filteredCommits.length} commits + ${mergeCount} merges...`);
 
-  // Aggregate by date (KST)
+  // Aggregate by date (local timezone)
   const dateMap = new Map<string, { count: number; commits: { title: string; project: string; time: string }[] }>();
   for (const commit of filteredCommits) {
-    const date = toKSTDateString(commit.date);
+    const date = toLocalDateString(commit.date);
     if (!dateMap.has(date)) {
       dateMap.set(date, { count: 0, commits: [] });
     }
@@ -355,23 +353,23 @@ export async function fetchDashboardData(
     .map(([name, commits]) => ({ name, commits }))
     .sort((a, b) => b.commits - a.commits);
 
-  // Hour stats (KST)
+  // Hour stats (local timezone)
   const hours = new Array(24).fill(0);
   for (const commit of filteredCommits) {
-    const hour = toKST(commit.date).getUTCHours();
+    const hour = toLocal(commit.date).getHours();
     hours[hour]++;
   }
   const hourStats = hours.map((count: number, hour: number) => ({ hour, count }));
 
-  // Streak calculation (KST-based)
-  const nowKST = new Date(Date.now() + KST_OFFSET);
-  const todayKST = format(nowKST, "yyyy-MM-dd");
-  const yesterdayKST = format(new Date(nowKST.getTime() - 86400000), "yyyy-MM-dd");
+  // Streak calculation (local timezone)
+  const now = new Date();
+  const todayStr = format(now, "yyyy-MM-dd");
+  const yesterdayStr = format(new Date(now.getTime() - 86400000), "yyyy-MM-dd");
 
   const sortedDates = Array.from(dateMap.keys()).sort().reverse();
 
   let currentStreak = 0;
-  if (sortedDates.length > 0 && (sortedDates[0] === todayKST || sortedDates[0] === yesterdayKST)) {
+  if (sortedDates.length > 0 && (sortedDates[0] === todayStr || sortedDates[0] === yesterdayStr)) {
     currentStreak = 1;
     for (let i = 0; i < sortedDates.length - 1; i++) {
       const curr = parseISO(sortedDates[i]);
@@ -414,7 +412,7 @@ export async function fetchDashboardData(
   // Compress commits for AI
   const groupMap = new Map<string, { titles: string[]; count: number }>();
   for (const c of filteredCommits) {
-    const month = toKSTDateString(c.date).substring(0, 7);
+    const month = toLocalDateString(c.date).substring(0, 7);
     const key = `${c.project}|||${month}`;
     const entry = groupMap.get(key);
     if (entry) {
