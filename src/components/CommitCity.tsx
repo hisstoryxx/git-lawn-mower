@@ -6,11 +6,10 @@ import { OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { HeatmapDay } from "@/lib/types";
 
-function toKSTTime(dateStr: string): string {
-  const utc = new Date(dateStr);
-  const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
-  const h = kst.getUTCHours().toString().padStart(2, "0");
-  const m = kst.getUTCMinutes().toString().padStart(2, "0");
+function toLocalTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const h = d.getHours().toString().padStart(2, "0");
+  const m = d.getMinutes().toString().padStart(2, "0");
   return `${h}:${m}`;
 }
 
@@ -840,7 +839,7 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
                             {commit.project}
                           </span>
                           <span className="text-xs text-gray-500">
-                            {toKSTTime(commit.time)}
+                            {toLocalTime(commit.time)}
                           </span>
                         </div>
                       </div>
