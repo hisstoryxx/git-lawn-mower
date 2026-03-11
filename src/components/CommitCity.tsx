@@ -300,11 +300,11 @@ function LawnMower({ gridWidth, gridDepth, onMow }: LawnMowerProps) {
 
     if (forward) {
       velRef.current.x += Math.sin(rotRef.current) * ACCEL * clampDelta;
-      velRef.current.z -= Math.cos(rotRef.current) * ACCEL * clampDelta;
+      velRef.current.z += Math.cos(rotRef.current) * ACCEL * clampDelta;
     }
     if (backward) {
       velRef.current.x -= Math.sin(rotRef.current) * ACCEL * 0.5 * clampDelta;
-      velRef.current.z += Math.cos(rotRef.current) * ACCEL * 0.5 * clampDelta;
+      velRef.current.z -= Math.cos(rotRef.current) * ACCEL * 0.5 * clampDelta;
     }
 
     // Apply friction (momentum decay)
@@ -347,20 +347,20 @@ function LawnMower({ gridWidth, gridDepth, onMow }: LawnMowerProps) {
       bladeRef.current.rotation.z += clampDelta * (15 + speed * 3);
     }
 
-    // Chase camera: behind the mower, looking forward
+    // Chase camera: behind the mower, looking forward in travel direction
     const camDist = 8 + speed * 0.15;
     const camHeight = 5 + speed * 0.08;
     const camOffset = new THREE.Vector3(
       posRef.current.x - Math.sin(rotRef.current) * camDist,
       camHeight,
-      posRef.current.z + Math.cos(rotRef.current) * camDist
+      posRef.current.z - Math.cos(rotRef.current) * camDist
     );
     camera.position.lerp(camOffset, clampDelta * 3);
     // Look ahead of the mower
     const lookAhead = new THREE.Vector3(
       posRef.current.x + Math.sin(rotRef.current) * 10,
       0.5,
-      posRef.current.z - Math.cos(rotRef.current) * 10
+      posRef.current.z + Math.cos(rotRef.current) * 10
     );
     camera.lookAt(lookAhead);
 
@@ -572,27 +572,29 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
   }, [particles.length]);
 
   const spawnDebris = useCallback((wx: number, wz: number, color: string, intensity: number) => {
-    const count = Math.min(Math.floor(intensity * 8) + 4, 15);
+    const count = Math.min(Math.floor(intensity * 20) + 12, 40);
     const newParticles: Particle[] = [];
+    const colors = [color, "#ffff00", "#ff6600", "#44ff44", "#ffffff"];
     for (let i = 0; i < count; i++) {
+      const isFirework = Math.random() < 0.3;
       newParticles.push({
         id: particleIdCounter++,
         position: new THREE.Vector3(
-          wx * 1.1 + (Math.random() - 0.5) * 0.6,
-          Math.random() * 2 + 0.5,
-          wz * 1.1 + (Math.random() - 0.5) * 0.6
+          wx * 1.1 + (Math.random() - 0.5) * 0.8,
+          Math.random() * 1.5 + 0.3,
+          wz * 1.1 + (Math.random() - 0.5) * 0.8
         ),
         velocity: new THREE.Vector3(
-          (Math.random() - 0.5) * 6,
-          Math.random() * 8 + 4,
-          (Math.random() - 0.5) * 6
+          (Math.random() - 0.5) * (isFirework ? 14 : 8),
+          Math.random() * (isFirework ? 18 : 12) + 6,
+          (Math.random() - 0.5) * (isFirework ? 14 : 8)
         ),
-        color,
-        scale: Math.random() * 0.5 + 0.3,
-        life: Math.random() * 1.5 + 0.8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        scale: Math.random() * 0.7 + 0.3,
+        life: Math.random() * 2 + 1,
       });
     }
-    setParticles((prev) => [...prev.slice(-80), ...newParticles]);
+    setParticles((prev) => [...prev.slice(-150), ...newParticles]);
   }, []);
 
   const handleMow = useCallback((week: number, dayOfWeek: number) => {
