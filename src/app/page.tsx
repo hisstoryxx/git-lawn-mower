@@ -211,8 +211,8 @@ export default function Home() {
               </a>
 
               {/* Email */}
-              <button
-                onClick={() => alert("Coming soon!")}
+              <a
+                href="mailto:hisstoryxx@gmail.com"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-blue-500/50 rounded-lg text-sm text-gray-300 hover:text-blue-400 transition-all"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -220,11 +220,19 @@ export default function Home() {
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                 </svg>
                 Contact
-              </button>
+              </a>
             </div>
 
             <div className="text-gray-700 text-xs">
-              Made by hisstoryxx
+              Made by{" "}
+              <a
+                href="https://github.com/hisstoryxx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                hisstoryxx
+              </a>
             </div>
           </div>
         </div>
