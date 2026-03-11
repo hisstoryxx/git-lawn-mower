@@ -187,17 +187,15 @@ export default function Home() {
 
             <div className="flex items-center gap-3 flex-wrap justify-center">
               {/* GitHub Sponsors */}
-              <a
-                href="https://github.com/sponsors/hisstoryxx"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => alert("Coming soon!")}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-pink-500/50 rounded-lg text-sm text-gray-300 hover:text-pink-400 transition-all"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M4.25 2.5c-1.336 0-2.75 1.164-2.75 3 0 2.15 1.58 4.144 3.365 5.682A20.565 20.565 0 008 13.393a20.561 20.561 0 003.135-2.211C12.92 9.644 14.5 7.65 14.5 5.5c0-1.836-1.414-3-2.75-3-1.373 0-2.609.986-3.029 2.456a.75.75 0 01-1.442 0C6.859 3.486 5.623 2.5 4.25 2.5z"/>
                 </svg>
                 Sponsor
-              </a>
+              </button>
 
               {/* KakaoPay */}
               <a
@@ -213,8 +211,8 @@ export default function Home() {
               </a>
 
               {/* Email */}
-              <a
-                href="mailto:hisstoryxx@gmail.com"
+              <button
+                onClick={() => alert("Coming soon!")}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-blue-500/50 rounded-lg text-sm text-gray-300 hover:text-blue-400 transition-all"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -222,7 +220,7 @@ export default function Home() {
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                 </svg>
                 Contact
-              </a>
+              </button>
             </div>
 
             <div className="text-gray-700 text-xs">
