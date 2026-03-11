@@ -648,7 +648,7 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
     <div className="relative w-full rounded-xl overflow-hidden bg-[#0d1117] border border-gray-800">
       <div className={`flex ${selectedDay && !gameMode ? "h-[600px]" : "h-[500px]"}`}>
         {/* 3D Canvas */}
-        <div className={`relative ${selectedDay && !gameMode ? "w-[60%]" : "w-full"} h-full transition-all duration-300`}>
+        <div className={`relative ${selectedDay && !gameMode ? "w-[60%]" : "w-full"} h-full transition-all duration-300 ${gameMode ? "touch-none" : ""}`}>
           <Canvas
             camera={
               gameMode
@@ -708,7 +708,7 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
           {/* Virtual joystick - mobile */}
           {gameMode && (
             <div
-              className="absolute bottom-6 left-6 w-32 h-32 md:hidden"
+              className="absolute bottom-6 left-6 w-32 h-32 md:hidden touch-none"
               onTouchStart={(e) => {
                 e.preventDefault();
                 const touch = e.touches[0];
