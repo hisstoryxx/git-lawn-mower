@@ -337,6 +337,18 @@ export default function SetupForm({ onComplete }: SetupFormProps) {
             <br />Nothing is sent to our server.
           </p>
         </form>
+
+        <div className="mt-6 text-center text-gray-600 text-xs">
+          Made by{" "}
+          <a
+            href="https://github.com/hisstoryxx"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            hisstoryxx
+          </a>
+        </div>
       </div>
     </div>
   );
