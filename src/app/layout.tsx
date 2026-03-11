@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Lawn Mower - GitLab Activity Visualizer",
-  description: "Visualize your GitLab commits as a 3D city",
+  title: "Lawn Mower - Git Activity Visualizer",
+  description: "Visualize your Git commits as a 3D city",
 };
 
 export default function RootLayout({
