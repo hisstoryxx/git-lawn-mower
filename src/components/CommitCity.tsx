@@ -93,6 +93,61 @@ function DebrisParticles({ particles }: { particles: Particle[] }) {
   );
 }
 
+// ─── Text Debris (commit messages) ───
+
+interface TextParticle {
+  id: number;
+  text: string;
+  position: THREE.Vector3;
+  velocity: THREE.Vector3;
+  color: string;
+  life: number;
+}
+
+function TextDebrisParticles({ particles }: { particles: TextParticle[] }) {
+  const groupRefs = useRef<(THREE.Group | null)[]>([]);
+
+  useFrame((_, delta) => {
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const group = groupRefs.current[i];
+      if (!group || p.life <= 0) continue;
+
+      p.velocity.y -= 3 * delta;
+      p.position.add(p.velocity.clone().multiplyScalar(delta));
+      p.life -= delta * 0.4;
+
+      group.position.copy(p.position);
+      group.rotation.z = Math.sin(p.life * 3) * 0.15;
+      group.scale.setScalar(Math.min(p.life * 1.2, 1));
+    }
+  });
+
+  return (
+    <>
+      {particles.map((p, i) => (
+        <group
+          key={p.id}
+          ref={(el) => { groupRefs.current[i] = el; }}
+          position={p.position.clone()}
+        >
+          <Text
+            fontSize={0.35}
+            color={p.color}
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.02}
+            outlineColor="#000000"
+            maxWidth={8}
+          >
+            {p.text}
+          </Text>
+        </group>
+      ))}
+    </>
+  );
+}
+
 // ─── Building ───
 
 interface BuildingProps {
@@ -495,10 +550,11 @@ interface GameSceneProps {
   heatmap: HeatmapDay[];
   mowedSet: Set<string>;
   particles: Particle[];
+  textParticles: TextParticle[];
   onMow: (week: number, dayOfWeek: number) => void;
 }
 
-function GameScene({ heatmap, mowedSet, particles, onMow }: GameSceneProps) {
+function GameScene({ heatmap, mowedSet, particles, textParticles, onMow }: GameSceneProps) {
   const maxCount = useMemo(() => Math.max(...heatmap.map((d) => d.count), 1), [heatmap]);
   const maxWeek = useMemo(() => Math.max(...heatmap.map((d) => d.week), 0), [heatmap]);
 
@@ -546,6 +602,7 @@ function GameScene({ heatmap, mowedSet, particles, onMow }: GameSceneProps) {
       ))}
 
       <DebrisParticles particles={particles} />
+      <TextDebrisParticles particles={textParticles} />
 
       <LawnMower
         gridWidth={(maxWeek + 1) * 1.1}
@@ -570,6 +627,7 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
   const [gameMode, setGameMode] = useState(false);
   const [mowedSet, setMowedSet] = useState<Set<string>>(new Set());
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [textParticles, setTextParticles] = useState<TextParticle[]>([]);
 
   const maxCount = useMemo(() => Math.max(...heatmap.map((d) => d.count), 1), [heatmap]);
 
@@ -586,12 +644,13 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
 
   // Clean up dead particles periodically
   useEffect(() => {
-    if (particles.length === 0) return;
+    if (particles.length === 0 && textParticles.length === 0) return;
     const timer = setInterval(() => {
       setParticles((prev) => prev.filter((p) => p.life > 0));
+      setTextParticles((prev) => prev.filter((p) => p.life > 0));
     }, 2000);
     return () => clearInterval(timer);
-  }, [particles.length]);
+  }, [particles.length, textParticles.length]);
 
   const spawnDebris = useCallback((wx: number, wz: number, color: string, intensity: number) => {
     const count = Math.min(Math.floor(intensity * 20) + 12, 40);
@@ -631,6 +690,27 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
       if (day && day.count > 0) {
         const color = getGameColor(day.count, maxCount);
         spawnDebris(week, dayOfWeek, color, day.count / maxCount);
+
+        // Spawn commit message text particles
+        const msgs = day.commits.slice(0, 3);
+        const textColors = ["#ffffff", "#4ade80", "#facc15", "#60a5fa", "#f472b6"];
+        const newTexts: TextParticle[] = msgs.map((c, i) => ({
+          id: particleIdCounter++,
+          text: c.title.length > 30 ? c.title.substring(0, 30) + "..." : c.title,
+          position: new THREE.Vector3(
+            week * 1.1 + (Math.random() - 0.5) * 0.5,
+            2 + i * 1.5,
+            dayOfWeek * 1.1 + (Math.random() - 0.5) * 0.5
+          ),
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 4,
+            Math.random() * 5 + 4,
+            (Math.random() - 0.5) * 4
+          ),
+          color: textColors[i % textColors.length],
+          life: 2.5 + Math.random(),
+        }));
+        setTextParticles((prev) => [...prev.slice(-20), ...newTexts]);
       }
 
       return next;
@@ -641,6 +721,7 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
     if (gameMode) {
       setMowedSet(new Set());
       setParticles([]);
+      setTextParticles([]);
     }
     setSelectedDay(null);
     setGameMode(!gameMode);
@@ -664,7 +745,7 @@ export default function CommitCity({ heatmap }: CommitCityProps) {
           >
             <fog attach="fog" args={[gameMode ? "#1a1205" : "#0d1117", 30, 80]} />
             {gameMode ? (
-              <GameScene heatmap={heatmap} mowedSet={mowedSet} particles={particles} onMow={handleMow} />
+              <GameScene heatmap={heatmap} mowedSet={mowedSet} particles={particles} textParticles={textParticles} onMow={handleMow} />
             ) : (
               <CityScene
                 heatmap={heatmap}
