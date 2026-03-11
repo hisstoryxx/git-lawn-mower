@@ -232,7 +232,7 @@ function DayLabels() {
           label && (
             <Text
               key={label}
-              position={[-2, 0.1, i * 1.1 + 0.5]}
+              position={[-2, 0.5, i * 1.1 + 0.5]}
               fontSize={0.6}
               color="#c9d1d9"
               anchorX="center"

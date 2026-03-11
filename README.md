@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lawn Mower
+
+Your Git activity, beautifully visualized as a 3D city — with a lawn mower game.
+
+## Features
+
+- **3D Commit City** — Each building represents a day. Taller buildings = more commits. Click any building to see all commits for that day.
+- **Lawn Mower Game** — Drive a mower through your commit city. Mow the grass with explosive firework effects. Mobile touch controls supported.
+- **AI Work Summary** — Powered by Claude AI. Analyzes your entire commit history and generates a comprehensive work summary.
+- **Stats Dashboard** — Total commits, active projects, current/longest streak, busiest day, coding hours chart, and project breakdown.
+- **GitLab & GitHub** — Supports both platforms. Just enter your personal access token.
+- **Privacy First** — Your token stays in your browser's localStorage. Nothing is stored on the server.
+
+## Tech Stack
+
+- **Next.js 14** (App Router, TypeScript)
+- **Three.js** + react-three-fiber (3D rendering)
+- **Tailwind CSS** (styling)
+- **Anthropic Claude API** (AI summary, server-side only)
+- **Recharts** (charts)
+- **Vercel** (deployment)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- Anthropic API key (for AI summary feature)
+
+### Setup
+
+```bash
+git clone https://github.com/hisstoryxx/git-lawn-mower.git
+cd git-lawn-mower
+npm install
+```
+
+Create `.env.local`:
+
+```
+ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+Run the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) and enter your GitLab/GitHub token to get started.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### How to Get a Token
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**GitLab:** Settings > Access Tokens > Add new token > Select `read_api` scope
 
-## Learn More
+**GitHub:** Settings > Developer settings > Personal access tokens > Tokens (classic) > Select `repo` scope
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deploy to Vercel with one click:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/hisstoryxx/git-lawn-mower&env=ANTHROPIC_API_KEY&envDescription=Anthropic%20API%20key%20for%20AI%20summary%20feature)
 
-## Deploy on Vercel
+Or via CLI:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm i -g vercel
+vercel --prod
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set `ANTHROPIC_API_KEY` in Vercel project settings > Environment Variables.
+
+## License
+
+MIT
+
+## Author
+
+**hisstoryxx** — [GitHub](https://github.com/hisstoryxx) | [Email](mailto:hisstoryxx@gmail.com)
