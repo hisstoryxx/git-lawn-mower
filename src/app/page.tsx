@@ -109,11 +109,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">
+              {settings.displayName && (
+                <span className="text-white">{settings.displayName}&apos;s </span>
+              )}
               <span className="text-green-400">Lawn</span>{" "}
               <span className="text-gray-300">Mower</span>
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Your GitLab activity, beautifully visualized
+              {settings.platform === "github" ? "GitHub" : "GitLab"} activity, beautifully visualized
             </p>
           </div>
           <div className="flex items-center gap-4">

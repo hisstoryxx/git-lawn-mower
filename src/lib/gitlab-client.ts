@@ -8,11 +8,12 @@ import {
 import { HeatmapDay, DashboardData } from "@/lib/types";
 
 export interface Settings {
-  gitlabToken: string;
-  gitlabUrl: string;
-  gitlabUsername: string;
-  gitlabName: string;
-  gitlabEmail: string;
+  platform: "gitlab" | "github";
+  token: string;
+  baseUrl: string;
+  username: string;
+  displayName: string;
+  email: string;
   monthsBack: number;
 }
 
@@ -35,6 +36,23 @@ interface GitLabCommit {
   project_id: number;
 }
 
+interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  fork: boolean;
+  pushed_at: string;
+}
+
+interface GitHubCommit {
+  sha: string;
+  commit: {
+    message: string;
+    author: { name: string; email: string; date: string };
+  };
+  author: { login: string } | null;
+}
+
 const SETTINGS_KEY = "lawn-mower-settings";
 const KST_OFFSET = 9 * 60 * 60 * 1000; // UTC+9
 
@@ -48,7 +66,7 @@ function toKSTDateString(dateStr: string): string {
 }
 
 function isMergeCommit(title: string): boolean {
-  return /^Merge branch\s/.test(title) || /^Merge remote-tracking branch\s/.test(title);
+  return /^Merge (branch|pull request|remote-tracking branch)\s/.test(title);
 }
 
 export function loadSettings(): Settings | null {
@@ -70,7 +88,9 @@ export function clearSettings(): void {
   localStorage.removeItem(SETTINGS_KEY);
 }
 
-async function fetchAllPages<T>(
+// --- GitLab API ---
+
+async function fetchGitLabPages<T>(
   gitlabUrl: string,
   token: string,
   endpoint: string,
@@ -99,12 +119,10 @@ async function fetchAllPages<T>(
 
     allItems.push(...items);
 
-    // Use x-next-page header as primary, fallback to checking if we got a full page
     const nextPage = res.headers.get("x-next-page");
     if (nextPage && nextPage !== "") {
       page = parseInt(nextPage, 10);
     } else if (items.length === perPage) {
-      // Header missing but we got a full page, try next
       page++;
     } else {
       break;
@@ -114,17 +132,15 @@ async function fetchAllPages<T>(
   return allItems;
 }
 
-export async function fetchDashboardData(
+async function fetchGitLabData(
   settings: Settings,
   onProgress?: (msg: string) => void
-): Promise<DashboardData> {
-  const { gitlabUrl, gitlabToken, gitlabUsername } = settings;
+): Promise<{ commits: { id: string; title: string; date: string; project: string }[]; mergeCount: number }> {
+  const { baseUrl, token, username } = settings;
 
   onProgress?.("Fetching projects...");
-  const projects = await fetchAllPages<GitLabProject>(
-    gitlabUrl,
-    gitlabToken,
-    "/projects",
+  const projects = await fetchGitLabPages<GitLabProject>(
+    baseUrl, token, "/projects",
     { membership: "true", simple: "true", archived: "false", order_by: "last_activity_at" }
   );
   onProgress?.(`Found ${projects.length} projects. Fetching commits...`);
@@ -133,15 +149,14 @@ export async function fetchDashboardData(
   sinceDate.setMonth(sinceDate.getMonth() - (settings.monthsBack || 12));
   const since = sinceDate.toISOString();
 
-  // Try multiple author identifiers to catch all commits
   const authorSet = new Map<string, boolean>();
-  if (settings.gitlabEmail) authorSet.set(settings.gitlabEmail, true);
-  if (settings.gitlabName) authorSet.set(settings.gitlabName, true);
-  if (gitlabUsername) authorSet.set(gitlabUsername, true);
+  if (settings.email) authorSet.set(settings.email, true);
+  if (settings.displayName) authorSet.set(settings.displayName, true);
+  if (username) authorSet.set(username, true);
   const authorQueries = Array.from(authorSet.keys());
 
-  const allCommits: (GitLabCommit & { project_name: string })[] = [];
-  const seenCommitIds = new Set<string>();
+  const allCommits: { id: string; title: string; date: string; project: string }[] = [];
+  const seenIds = new Set<string>();
   const batchSize = 10;
 
   for (let i = 0; i < projects.length; i += batchSize) {
@@ -150,19 +165,23 @@ export async function fetchDashboardData(
 
     const results = await Promise.all(
       batch.map(async (project) => {
-        const projectCommits: (GitLabCommit & { project_name: string })[] = [];
+        const projectCommits: typeof allCommits = [];
         for (const author of authorQueries) {
           try {
-            const commits = await fetchAllPages<GitLabCommit>(
-              gitlabUrl,
-              gitlabToken,
+            const commits = await fetchGitLabPages<GitLabCommit>(
+              baseUrl, token,
               `/projects/${project.id}/repository/commits`,
               { since, author }
             );
             for (const c of commits) {
-              if (!seenCommitIds.has(c.id)) {
-                seenCommitIds.add(c.id);
-                projectCommits.push({ ...c, project_name: project.name });
+              if (!seenIds.has(c.id)) {
+                seenIds.add(c.id);
+                projectCommits.push({
+                  id: c.id,
+                  title: c.title,
+                  date: c.committed_date,
+                  project: project.name,
+                });
               }
             }
           } catch {
@@ -175,15 +194,127 @@ export async function fetchDashboardData(
     results.forEach((r) => allCommits.push(...r));
   }
 
-  // Separate merge commits
-  const filteredCommits = allCommits.filter((c) => !isMergeCommit(c.title));
-  const mergeCommitCount = allCommits.length - filteredCommits.length;
-  onProgress?.(`Processing ${filteredCommits.length} commits + ${mergeCommitCount} merges...`);
+  const filtered = allCommits.filter((c) => !isMergeCommit(c.title));
+  return { commits: filtered, mergeCount: allCommits.length - filtered.length };
+}
+
+// --- GitHub API ---
+
+async function fetchGitHubPages<T>(
+  token: string,
+  url: string,
+  params: Record<string, string> = {}
+): Promise<T[]> {
+  const allItems: T[] = [];
+  let page = 1;
+  const perPage = 100;
+
+  while (true) {
+    const u = new URL(url);
+    Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
+    u.searchParams.set("page", String(page));
+    u.searchParams.set("per_page", String(perPage));
+
+    const res = await fetch(u.toString(), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
+    }
+
+    const items: T[] = await res.json();
+    if (items.length === 0) break;
+    allItems.push(...items);
+    if (items.length < perPage) break;
+    page++;
+  }
+
+  return allItems;
+}
+
+async function fetchGitHubData(
+  settings: Settings,
+  onProgress?: (msg: string) => void
+): Promise<{ commits: { id: string; title: string; date: string; project: string }[]; mergeCount: number }> {
+  const { token, username } = settings;
+  const apiBase = "https://api.github.com";
+
+  onProgress?.("Fetching repositories...");
+  const repos = await fetchGitHubPages<GitHubRepo>(
+    token,
+    `${apiBase}/user/repos`,
+    { type: "all", sort: "pushed", direction: "desc" }
+  );
+
+  // Filter repos pushed within the time range
+  const sinceDate = new Date();
+  sinceDate.setMonth(sinceDate.getMonth() - (settings.monthsBack || 12));
+  const activeRepos = repos.filter((r) => new Date(r.pushed_at) >= sinceDate);
+  onProgress?.(`Found ${activeRepos.length} active repositories. Fetching commits...`);
+
+  const allCommits: { id: string; title: string; date: string; project: string }[] = [];
+  const seenIds = new Set<string>();
+  const batchSize = 10;
+
+  for (let i = 0; i < activeRepos.length; i += batchSize) {
+    const batch = activeRepos.slice(i, i + batchSize);
+    onProgress?.(`Scanning repos ${i + 1}-${Math.min(i + batchSize, activeRepos.length)} of ${activeRepos.length}...`);
+
+    const results = await Promise.all(
+      batch.map(async (repo) => {
+        const repoCommits: typeof allCommits = [];
+        try {
+          const commits = await fetchGitHubPages<GitHubCommit>(
+            token,
+            `${apiBase}/repos/${repo.full_name}/commits`,
+            { author: username, since: sinceDate.toISOString() }
+          );
+          for (const c of commits) {
+            if (!seenIds.has(c.sha)) {
+              seenIds.add(c.sha);
+              const title = c.commit.message.split("\n")[0];
+              repoCommits.push({
+                id: c.sha,
+                title,
+                date: c.commit.author.date,
+                project: repo.name,
+              });
+            }
+          }
+        } catch {
+          // skip inaccessible repos
+        }
+        return repoCommits;
+      })
+    );
+    results.forEach((r) => allCommits.push(...r));
+  }
+
+  const filtered = allCommits.filter((c) => !isMergeCommit(c.title));
+  return { commits: filtered, mergeCount: allCommits.length - filtered.length };
+}
+
+// --- Shared processing ---
+
+export async function fetchDashboardData(
+  settings: Settings,
+  onProgress?: (msg: string) => void
+): Promise<DashboardData> {
+  const { commits: filteredCommits, mergeCount } =
+    settings.platform === "github"
+      ? await fetchGitHubData(settings, onProgress)
+      : await fetchGitLabData(settings, onProgress);
+
+  onProgress?.(`Processing ${filteredCommits.length} commits + ${mergeCount} merges...`);
 
   // Aggregate by date (KST)
   const dateMap = new Map<string, { count: number; commits: { title: string; project: string; time: string }[] }>();
   for (const commit of filteredCommits) {
-    const date = toKSTDateString(commit.committed_date);
+    const date = toKSTDateString(commit.date);
     if (!dateMap.has(date)) {
       dateMap.set(date, { count: 0, commits: [] });
     }
@@ -191,8 +322,8 @@ export async function fetchDashboardData(
     entry.count++;
     entry.commits.push({
       title: commit.title,
-      project: commit.project_name,
-      time: commit.committed_date,
+      project: commit.project,
+      time: commit.date,
     });
   }
 
@@ -218,7 +349,7 @@ export async function fetchDashboardData(
   // Project stats
   const projectMap = new Map<string, number>();
   for (const commit of filteredCommits) {
-    projectMap.set(commit.project_name, (projectMap.get(commit.project_name) || 0) + 1);
+    projectMap.set(commit.project, (projectMap.get(commit.project) || 0) + 1);
   }
   const projectStats = Array.from(projectMap.entries())
     .map(([name, commits]) => ({ name, commits }))
@@ -227,7 +358,7 @@ export async function fetchDashboardData(
   // Hour stats (KST)
   const hours = new Array(24).fill(0);
   for (const commit of filteredCommits) {
-    const hour = toKST(commit.committed_date).getUTCHours();
+    const hour = toKST(commit.date).getUTCHours();
     hours[hour]++;
   }
   const hourStats = hours.map((count: number, hour: number) => ({ hour, count }));
@@ -239,7 +370,6 @@ export async function fetchDashboardData(
 
   const sortedDates = Array.from(dateMap.keys()).sort().reverse();
 
-  // Current streak: consecutive days ending at today or yesterday
   let currentStreak = 0;
   if (sortedDates.length > 0 && (sortedDates[0] === todayKST || sortedDates[0] === yesterdayKST)) {
     currentStreak = 1;
@@ -255,7 +385,6 @@ export async function fetchDashboardData(
     }
   }
 
-  // Longest streak ever in the period
   let longestStreak = 0;
   if (sortedDates.length > 0) {
     const asc = Array.from(dateMap.keys()).sort();
@@ -282,11 +411,11 @@ export async function fetchDashboardData(
     }
   });
 
-  // Compress commits for AI: group by project x month, extract key messages
+  // Compress commits for AI
   const groupMap = new Map<string, { titles: string[]; count: number }>();
   for (const c of filteredCommits) {
-    const month = toKSTDateString(c.committed_date).substring(0, 7); // yyyy-MM
-    const key = `${c.project_name}|||${month}`;
+    const month = toKSTDateString(c.date).substring(0, 7);
+    const key = `${c.project}|||${month}`;
     const entry = groupMap.get(key);
     if (entry) {
       entry.count++;
@@ -302,7 +431,6 @@ export async function fetchDashboardData(
     const samples = val.titles.join("; ");
     commitMessages.push(`[${project}] ${month} (${val.count} commits): ${samples}`);
   });
-  // Sort by month desc
   commitMessages.sort((a, b) => {
     const ma = a.match(/\d{4}-\d{2}/);
     const mb = b.match(/\d{4}-\d{2}/);
@@ -314,7 +442,7 @@ export async function fetchDashboardData(
     projectStats,
     hourStats,
     totalCommits: filteredCommits.length,
-    mergeCommits: mergeCommitCount,
+    mergeCommits: mergeCount,
     totalProjects: projectStats.length,
     currentStreak,
     longestStreak,
