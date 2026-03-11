@@ -260,10 +260,10 @@ function LawnMower({ gridWidth, gridDepth, onMow }: LawnMowerProps) {
   const tiltRef = useRef({ x: 0, z: 0 }); // body tilt for visual feedback
   const { camera } = useThree();
 
-  const ACCEL = 18;
-  const MAX_SPEED = 12;
-  const FRICTION = 0.92; // sliding friction (lower = more slippery)
-  const TURN_SPEED = 3.5;
+  const ACCEL = 40;
+  const MAX_SPEED = 28;
+  const FRICTION = 0.94;
+  const TURN_SPEED = 4;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -347,15 +347,22 @@ function LawnMower({ gridWidth, gridDepth, onMow }: LawnMowerProps) {
       bladeRef.current.rotation.z += clampDelta * (15 + speed * 3);
     }
 
-    // Camera follow with speed-based distance
-    const camDist = 10 + speed * 0.3;
+    // Chase camera: behind the mower, looking forward
+    const camDist = 8 + speed * 0.15;
+    const camHeight = 5 + speed * 0.08;
     const camOffset = new THREE.Vector3(
       posRef.current.x - Math.sin(rotRef.current) * camDist,
-      8 + speed * 0.2,
+      camHeight,
       posRef.current.z + Math.cos(rotRef.current) * camDist
     );
     camera.position.lerp(camOffset, clampDelta * 3);
-    camera.lookAt(posRef.current.x, 0, posRef.current.z);
+    // Look ahead of the mower
+    const lookAhead = new THREE.Vector3(
+      posRef.current.x + Math.sin(rotRef.current) * 10,
+      0.5,
+      posRef.current.z - Math.cos(rotRef.current) * 10
+    );
+    camera.lookAt(lookAhead);
 
     // Check mowing collision
     const gridX = Math.round(posRef.current.x / 1.1);
