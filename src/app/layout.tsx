@@ -17,6 +17,9 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Lawn Mower - Git Activity Visualizer",
   description: "Visualize your Git commits as a 3D city",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
