@@ -193,10 +193,16 @@ function MonthLabels({ heatmap }: { heatmap: HeatmapDay[] }) {
         seen.set(month, day.week);
       }
     }
-    const labels: { month: string; week: number }[] = [];
+    const labels: { month: string; week: number; isYear?: boolean }[] = [];
+    let lastYear = "";
     seen.forEach((week, month) => {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const monthIdx = parseInt(month.split("-")[1], 10) - 1;
+      const [year, m] = month.split("-");
+      const monthIdx = parseInt(m, 10) - 1;
+      if (year !== lastYear) {
+        labels.push({ month: year, week, isYear: true });
+        lastYear = year;
+      }
       labels.push({ month: monthNames[monthIdx], week });
     });
     return labels;
@@ -206,14 +212,14 @@ function MonthLabels({ heatmap }: { heatmap: HeatmapDay[] }) {
     <>
       {months.map((m) => (
         <Text
-          key={m.month + m.week}
-          position={[m.week * 1.1 + 0.5, 0.5, -2.5]}
-          fontSize={0.8}
-          color="#e6edf3"
+          key={(m.isYear ? "y" : "m") + m.month + m.week}
+          position={[m.week * 1.1 + 0.5, 0.5, m.isYear ? -4 : -2.5]}
+          fontSize={m.isYear ? 1 : 0.8}
+          color={m.isYear ? "#58a6ff" : "#e6edf3"}
           anchorX="center"
           font={undefined}
           fontWeight="bold"
-          outlineWidth={0.03}
+          outlineWidth={m.isYear ? 0.04 : 0.03}
           outlineColor="#000000"
         >
           {m.month}
@@ -269,9 +275,9 @@ function LawnMower({ gridWidth, gridDepth, onMow }: LawnMowerProps) {
   const tiltRef = useRef({ x: 0, z: 0 }); // body tilt for visual feedback
   const { camera } = useThree();
 
-  const ACCEL = 40;
-  const MAX_SPEED = 28;
-  const FRICTION = 0.94;
+  const ACCEL = 55;
+  const MAX_SPEED = 38;
+  const FRICTION = 0.95;
   const TURN_SPEED = 4;
 
   useEffect(() => {
