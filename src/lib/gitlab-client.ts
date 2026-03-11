@@ -84,6 +84,36 @@ export function saveSettings(settings: Settings): void {
 
 export function clearSettings(): void {
   localStorage.removeItem(SETTINGS_KEY);
+  localStorage.removeItem(CACHE_KEY);
+}
+
+const CACHE_KEY = "lawn-mower-cache";
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+export function loadCachedData(): DashboardData | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(CACHE_KEY);
+  if (!raw) return null;
+  try {
+    const { data, timestamp, settingsHash } = JSON.parse(raw);
+    const settings = loadSettings();
+    const currentHash = settings ? `${settings.platform}-${settings.username}-${settings.monthsBack}` : "";
+    if (settingsHash !== currentHash) return null;
+    if (Date.now() - timestamp > CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedData(data: DashboardData): void {
+  const settings = loadSettings();
+  const settingsHash = settings ? `${settings.platform}-${settings.username}-${settings.monthsBack}` : "";
+  localStorage.setItem(CACHE_KEY, JSON.stringify({
+    data,
+    timestamp: Date.now(),
+    settingsHash,
+  }));
 }
 
 // --- GitLab API ---

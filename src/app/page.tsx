@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, lazy } from "react";
 import { DashboardData } from "@/lib/types";
-import { Settings, loadSettings, clearSettings, fetchDashboardData } from "@/lib/gitlab-client";
+import { Settings, loadSettings, clearSettings, fetchDashboardData, loadCachedData, saveCachedData } from "@/lib/gitlab-client";
 import SetupForm from "@/components/SetupForm";
 import StatsCards from "@/components/StatsCards";
 import ProjectChart from "@/components/ProjectChart";
@@ -18,11 +18,17 @@ export default function Home() {
   const [progress, setProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
     const saved = loadSettings();
     if (saved) {
       setSettings(saved);
+      const cached = loadCachedData();
+      if (cached) {
+        setData(cached);
+        setFromCache(true);
+      }
     }
     setReady(true);
   }, []);
@@ -30,9 +36,11 @@ export default function Home() {
   const fetchData = useCallback(async (s: Settings) => {
     setLoading(true);
     setError(null);
+    setFromCache(false);
     try {
       const result = await fetchDashboardData(s, setProgress);
       setData(result);
+      saveCachedData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch data");
     } finally {
@@ -58,6 +66,13 @@ export default function Home() {
     setData(null);
   };
 
+  const handleRefresh = () => {
+    if (settings) {
+      setData(null);
+      fetchData(settings);
+    }
+  };
+
   if (!ready) return null;
 
   if (!settings) {
@@ -69,7 +84,7 @@ export default function Home() {
       <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin h-10 w-10 border-[3px] border-green-400 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-400">{progress || "Loading commits from GitLab..."}</p>
+          <p className="text-gray-400">{progress || "Loading commits..."}</p>
           <p className="text-gray-600 text-sm mt-2">This may take a moment for the first load</p>
         </div>
       </div>
@@ -122,8 +137,22 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <div className="text-right text-sm text-gray-500">
               <div>{data.totalCommits} commits analyzed</div>
-              <div>Past {settings.monthsBack} months</div>
+              <div className="flex items-center gap-1 justify-end">
+                <span>Past {settings.monthsBack} months</span>
+                {fromCache && (
+                  <span className="text-xs text-yellow-500/70">(cached)</span>
+                )}
+              </div>
             </div>
+            <button
+              onClick={handleRefresh}
+              className="p-2 text-gray-500 hover:text-green-400 transition-colors"
+              title="Refresh data"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+            </button>
             <button
               onClick={handleReset}
               className="p-2 text-gray-500 hover:text-gray-300 transition-colors"
