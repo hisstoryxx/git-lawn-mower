@@ -31,7 +31,7 @@ Stats: ${totalCommits} commits + ${mergeCommits} merges across ${totalProjects} 
 
 The data below is grouped by [Project] Month (commit count): up to 5 sample commit titles per group.
 
-Based on this, write a comprehensive work summary in Korean:
+Based on this, write a comprehensive work summary in English:
 
 1. **Overall** - a brief paragraph about the developer's overall work and contribution level
 2. **Project breakdown** - for each major project, what was done (features, fixes, refactoring)

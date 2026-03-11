@@ -208,7 +208,7 @@ function MonthLabels({ heatmap }: { heatmap: HeatmapDay[] }) {
       {months.map((m) => (
         <Text
           key={m.month + m.week}
-          position={[m.week * 1.1 + 0.5, 0.1, -1.8]}
+          position={[m.week * 1.1 + 0.5, 0.5, -2.5]}
           fontSize={0.8}
           color="#e6edf3"
           anchorX="center"
